@@ -1,15 +1,17 @@
 use std::ops::Index;
+use std::iter::Iterator;
+use std::slice::Iter;
 
 /// `ImmutableList` represents an immutable singly linked list.
 #[derive(Debug, PartialEq, Clone)]
-struct ImmutableLst<T> {
+struct ImmutableList<T> {
     value: Option<T>,
-    next: Option<Box<ImmutableLst<T>>>
+    next: Option<Box<ImmutableList<T>>>
 }
 
-impl<T> ImmutableLst<T> where T: Clone {
+impl<T> ImmutableList<T> where T: Clone {
     pub fn new() -> Self {
-        ImmutableLst { value: None, next: None }
+        ImmutableList { value: None, next: None }
     }
 
     pub fn len(&self) -> usize {
@@ -22,6 +24,14 @@ impl<T> ImmutableLst<T> where T: Clone {
         }
     }
 
+    pub fn index(&self, index: usize) -> Option<T> {
+        self.clone().iter().enumerate()
+        .find(|(i, _)| i == &index)
+        .map(
+            |(_, v)| v
+        )
+    }
+
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -29,26 +39,47 @@ impl<T> ImmutableLst<T> where T: Clone {
     pub fn prepend(&self, value: T) -> Self {
         match self.is_empty() {
             true => {
-                ImmutableLst { 
+                ImmutableList { 
                     value: Some(value), 
                     next: None
                 }
             },
             false => {
-                ImmutableLst { 
+                ImmutableList { 
                     value: Some(value), 
                     next: Some(Box::new(self.clone())),
                 }
             },
         }
     }
+
+    pub fn iter(&self) -> IterList<T> {
+        IterList { value: self.value.clone(), next: self.next.clone() }
+    }
 }
 
-impl<T> Index<usize> for ImmutableLst<T> where T: Clone {
-    type Output = T;
+#[derive(Debug, PartialEq, Clone)]
+struct IterList<T>{
+    value: Option<T>,
+    next: Option<Box<ImmutableList<T>>>
+}
 
-    fn index(&self, index: usize) -> &Self::Output {
-        todo!()
+impl<T> Iterator for IterList<T> where T: Clone {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let tmp = &self.value.clone();
+        match &self.next {
+            Some(v) => {
+                self.value = v.value.clone();
+                self.next = v.next.clone();
+            },
+            None => {
+                self.value = None;
+                self.next = None;
+            },
+        }
+        tmp.to_owned()
     }
 }
 
@@ -58,14 +89,14 @@ mod tests {
     use super::*;
     #[test]
     fn test_prepend() {
-        let im_list = ImmutableLst::new();
+        let im_list = ImmutableList::new();
         let new_list = im_list.prepend(1);
-        assert_eq!(new_list, ImmutableLst{value: Some(1), next: None});
+        assert_eq!(new_list, ImmutableList{value: Some(1), next: None});
     }
 
     #[test]
     fn test_len() {
-        let im_list = ImmutableLst::new();
+        let im_list = ImmutableList::new();
         let new_list = im_list.prepend(1);
         assert_eq!(new_list.len(), 1);
 
@@ -75,10 +106,33 @@ mod tests {
 
     #[test]
     fn test_is_empty() {
-        let im_list = ImmutableLst::new();
+        let im_list = ImmutableList::new();
         assert!(im_list.is_empty());
 
         let new_list = im_list.prepend(1);
         assert!(!new_list.is_empty());
+    }
+
+    #[test]
+    fn test_iter() {
+        let im_list = ImmutableList::new();
+        let new_list = im_list.prepend(1);
+        let new_list = new_list.prepend(2);
+        let mut iter = new_list.iter();
+        dbg!(&new_list);
+        assert_eq!(iter.next(), Some(2));
+        assert_eq!(iter.next(), Some(1));
+        assert_eq!(iter.next(), None);
+        dbg!(&new_list);
+    }
+
+    #[test]
+    fn test_index() {
+        let im_list = ImmutableList::new();
+        assert_eq!(im_list.index(0), None);
+
+        let new_list = im_list.prepend(2);
+        dbg!(&new_list);
+        assert_eq!(new_list.index(0), Some(2));
     }
 }
