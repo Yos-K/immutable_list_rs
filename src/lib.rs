@@ -53,6 +53,25 @@ impl<T> ImmutableList<T> where T: Clone {
         }
     }
 
+    pub fn append(&self, value: T) -> Self {
+        match self.is_empty() {
+            true => {
+                ImmutableList { 
+                    value: Some(value), 
+                    next: None
+                }
+            },
+            false => match &self.next {
+                Some(v) => v.append(value),
+                None => {
+                    ImmutableList {value: self.value.clone(), next: Some(Box::new(
+                        ImmutableList {value: Some(value), next: None}
+                    ))}
+                },
+            },
+        }
+    }
+
     pub fn iter(&self) -> IterList<T> {
         IterList { current: Some(self) }
     }
@@ -86,6 +105,15 @@ mod tests {
         let im_list = ImmutableList::new();
         let new_list = im_list.prepend(1);
         assert_eq!(new_list, ImmutableList{value: Some(1), next: None});
+    }
+
+    #[test]
+    fn test_append() {
+        let im_list = ImmutableList::new();
+        let new_list = im_list.append(1);
+        assert_eq!(new_list, ImmutableList{value: Some(1), next: None});
+        let new_list = new_list.append(2);
+        assert_eq!(new_list, ImmutableList{value: Some(1), next: Some(Box::new(ImmutableList{value: Some(2), next: None}))});
     }
 
     #[test]
