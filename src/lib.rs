@@ -24,8 +24,8 @@ impl<T> ImmutableList<T> where T: Clone {
         }
     }
 
-    pub fn index(&self, index: usize) -> Option<T> {
-        self.clone().iter().enumerate()
+    pub fn index(&self, index: usize) -> Option<&T> {
+        self.iter().enumerate()
         .find(|(i, _)| i == &index)
         .map(
             |(_, v)| v
@@ -54,32 +54,26 @@ impl<T> ImmutableList<T> where T: Clone {
     }
 
     pub fn iter(&self) -> IterList<T> {
-        IterList { value: self.value.clone(), next: self.next.clone() }
+        IterList { current: Some(self) }
     }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-struct IterList<T>{
-    value: Option<T>,
-    next: Option<Box<ImmutableList<T>>>
+struct IterList<'a, T>{
+    current: Option<&'a ImmutableList<T>>,
 }
 
-impl<T> Iterator for IterList<T> where T: Clone {
-    type Item = T;
+impl<'a, T> Iterator for IterList<'a, T> where T: Clone {
+    type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let tmp = &self.value.clone();
-        match &self.next {
+        match self.current {
             Some(v) => {
-                self.value = v.value.clone();
-                self.next = v.next.clone();
+                self.current = v.next.as_deref();
+                v.value.as_ref()
             },
-            None => {
-                self.value = None;
-                self.next = None;
-            },
+            None => None,
         }
-        tmp.to_owned()
     }
 }
 
@@ -120,8 +114,8 @@ mod tests {
         let new_list = new_list.prepend(2);
         let mut iter = new_list.iter();
         dbg!(&new_list);
-        assert_eq!(iter.next(), Some(2));
-        assert_eq!(iter.next(), Some(1));
+        assert_eq!(iter.next(), Some(&2));
+        assert_eq!(iter.next(), Some(&1));
         assert_eq!(iter.next(), None);
         dbg!(&new_list);
     }
@@ -133,6 +127,6 @@ mod tests {
 
         let new_list = im_list.prepend(2);
         dbg!(&new_list);
-        assert_eq!(new_list.index(0), Some(2));
+        assert_eq!(new_list.index(0), Some(&2));
     }
 }
